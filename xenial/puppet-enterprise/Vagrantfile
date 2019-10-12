@@ -1,0 +1,28 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+  config.vm.define "puppetserver" do |puppetserver|
+    puppetserver.vm.box = "ubuntu/xenial64"
+    puppetserver.vm.hostname = "puppetserver.local.com"
+    puppetserver.vm.network "private_network", ip: "192.168.1.10"
+    puppetserver.vm.provision "shell", path: "install_puppet-enterprise.sh"
+    puppetserver.vm.provider "virtualbox" do |v|
+     v.memory = 4096
+     v.cpus = 2
+    end
+  end
+  # config.vm.network "forwarded_port", guest: 8080, host: 8081
+
+  config.vm.define "puppetagent" do |puppetagent|
+    config.vm.box = "ubuntu/xenial64"
+    puppetagent.vm.hostname = "puppetagent.local.com"
+    puppetagent.vm.network "private_network", ip: "192.168.1.11"
+    config.vm.provider "virtualbox" do |v|
+     v.memory = 1024
+     v.cpus = 1
+    end
+  end
+
+end
