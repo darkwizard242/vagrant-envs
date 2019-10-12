@@ -4,6 +4,7 @@
 apt-get update
 apt-get upgrade -y
 
+
 ## Installing packages required.
 dependencies="wget tar"
 
@@ -18,14 +19,58 @@ do
   fi
 done
 
+# Function to set Ubuntu's release version only if bionic (18.04) or xenial (16.04)
+rel_ver () {
+  if [[ $(lsb_release -cs) == "bionic" ]];
+  then
+    codename="18.04"
+  elif [[ $(lsb_release -cs) == "xenial" ]];
+  then
+    codename="16.04"
+  else
+    exit 1
+  fi
+}
+
+
+# Function to install Puppet Development Kit based on Ubuntu only if bionic (18.04) or xenial (16.04).
+install_pdk () {
+  if [[ $(lsb_release -cs) == "bionic" ]];
+  then
+    echo -e "\nInstalling pdk (Puppet Development Kit)\n"
+    wget https://apt.puppet.com/puppet-tools-release-bionic.deb
+    dpkg -i puppet-tools-release-bionic.deb
+    apt-get update
+    apt-get install pdk -y
+    apt-get install -f
+  elif [[ $(lsb_release -cs) == "xenial" ]];
+  then
+    echo -e "\nInstalling pdk (Puppet Development Kit)\n"
+    wget https://apt.puppet.com/puppet-tools-release-xenial.deb
+    dpkg -i puppet-tools-release-xenial.deb
+    apt-get update
+    apt-get install pdk -y
+    apt-get install -f
+  else
+    exit 1
+  fi
+}
+
+# Call function rel_var to set the version of Ubuntu in Puppet Enterprise download URL.
+# Applies only if system is Ubuntu with versions bionic (18.04) or xenial (16.04).
+rel_ver
+
+# Call function to install Puppet Development Kit based on the codename.
+# Applies only if system is Ubuntu with versions bionic (18.04) or xenial (16.04).
+install_pdk
 
 ## Download, install and configure PUPPET ENTERPRISE
 alt1=$(hostname)
 alt2=$(hostname -f)
 distro="ubuntu"
-version="2019.1.0"
+version="latest"
 osarch="amd64"
-release="16.04"
+release="${codename}"
 extract_path="/opt"
 binary="puppet-enterprise"
 
@@ -43,7 +88,7 @@ fi
 
 # Download and extract PUPPET ENTPERISE
 echo -e "\nDownloading:\t${binary}-${version}!\n"
-wget "https://pm.puppetlabs.com/cgi-bin/download.cgi?dist=${distro}&rel=${release}&arch=${osarch}&ver=${version}" -O /tmp/${binary}-${version}.tar.gz
+wget "https://pm.puppetlabs.com/cgi-bin/download.cgi?dist=${distro}&rel=${release}&arch=${osarch}&ver=${version}" -O /tmp/${binary}-${version}.tar.gz  &> /dev/null
 echo -e "\nExtracting: /tmp/${binary}-${version}.tar.gz \t to:\t ${extract_path}/${binary}-${version}"
 tar -xzf /tmp/${binary}-${version}.tar.gz -C ${extract_path}/${binary}-${version} --strip-components=1
 echo -e "\nRemoving:\t/tmp/${binary}.tar.gz" && rm -rfv /tmp/${binary}-${version}.tar.gz
