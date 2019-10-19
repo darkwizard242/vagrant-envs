@@ -138,7 +138,7 @@ echo ${PASS} | puppet access login --username admin
 # Enable autosign and set permissions
 echo "*" > /etc/puppetlabs/puppet/autosign.conf && chown pe-puppet:pe-puppet /etc/puppetlabs/puppet/autosign.conf
 
-puppet-code deploy production --dry-run
+/opt/puppetlabs/bin/puppet-code deploy production --wait
 
 # # Run puppet agent twice based on successful execution of first to make sure changes are there.
 # puppet agent -t && puppet agent -t
