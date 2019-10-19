@@ -19,7 +19,7 @@ do
   fi
 done
 
-# Function to set Ubuntu's release version only if bionic (18.04) or xenial (16.04)
+# Function to set Ubuntu's RELEASE VERSION only if bionic (18.04) or xenial (16.04)
 rel_ver () {
   if [[ $(lsb_release -cs) == "bionic" ]];
   then
@@ -56,77 +56,95 @@ install_pdk () {
   fi
 }
 
-# Call function rel_var to set the version of Ubuntu in Puppet Enterprise download URL.
-# Applies only if system is Ubuntu with versions bionic (18.04) or xenial (16.04).
+# Call function rel_var to set the VERSION of Ubuntu in Puppet Enterprise download URL.
+# Applies only if system is Ubuntu with VERSIONs bionic (18.04) or xenial (16.04).
 rel_ver
 
 # Call function to install Puppet Development Kit based on the codename.
-# Applies only if system is Ubuntu with versions bionic (18.04) or xenial (16.04).
+# Applies only if system is Ubuntu with VERSIONs bionic (18.04) or xenial (16.04).
 install_pdk
 
 ## Download, install and configure PUPPET ENTERPRISE
-alt1=$(hostname)
-alt2=$(hostname -f)
-distro="ubuntu"
-version="latest"
-osarch="amd64"
-release="${codename}"
-extract_path="/opt"
-binary="puppet-enterprise"
+ALT1=$(hostname)
+ALT2=$(hostname -f)
+PASS="password"
+R10K_REMOTE_REPO="git@github.com:darkwizard242/puppet-control-repo.git"
+DISTRO="ubuntu"
+VERSION="latest"
+OSARCH="amd64"
+RELEASE="${codename}"
+EXTRACT_PATH="/opt"
+BINARY="puppet-enterprise"
+DEPLOY_PRIV_KEY_FILE_ORIG="/tmp/id-control_repo.rsa"
+DEPLOY_PRIV_KEY_FILE_DEST="/etc/puppetlabs/puppetserver/ssh/id-control_repo.rsa"
 
 # Creating folder to untar PUPPET ENTERPRISE into.
-if [ -e ${extract_path}/${binary}-${version} ]
+if [ -e ${EXTRACT_PATH}/${BINARY}-${VERSION} ]
 then
-  echo -e "\nDirectory:\t${extract_path}/${binary}-${version}\texists. About to remove it.\n"
-  rm -rf ${extract_path}/${binary}-${version}
-  echo -e "\nRecreating:\t${extract_path}/${binary}-${version}"
-  mkdir -pv ${extract_path}/${binary}-${version}
+  echo -e "\nDirectory:\t${EXTRACT_PATH}/${BINARY}-${VERSION}\texists. About to remove it.\n"
+  rm -rf ${EXTRACT_PATH}/${BINARY}-${VERSION}
+  echo -e "\nRecreating:\t${EXTRACT_PATH}/${BINARY}-${VERSION}"
+  mkdir -pv ${EXTRACT_PATH}/${BINARY}-${VERSION}
 else
-  echo -e "\nDirectory:\t${extract_path}/${binary}-${version}\tdoesn't exist. Creating:\t${extract_path}/${binary}-${version}\t\n"
-  mkdir -pv ${extract_path}/${binary}-${version}
+  echo -e "\nDirectory:\t${EXTRACT_PATH}/${BINARY}-${VERSION}\tdoesn't exist. Creating:\t${EXTRACT_PATH}/${BINARY}-${VERSION}\t\n"
+  mkdir -pv ${EXTRACT_PATH}/${BINARY}-${VERSION}
 fi
 
 # Download and extract PUPPET ENTPERISE
-echo -e "\nDownloading:\t${binary}-${version}!\n"
-wget "https://pm.puppetlabs.com/cgi-bin/download.cgi?dist=${distro}&rel=${release}&arch=${osarch}&ver=${version}" -O /tmp/${binary}-${version}.tar.gz  &> /dev/null
-echo -e "\nExtracting: /tmp/${binary}-${version}.tar.gz \t to:\t ${extract_path}/${binary}-${version}"
-tar -xzf /tmp/${binary}-${version}.tar.gz -C ${extract_path}/${binary}-${version} --strip-components=1
-echo -e "\nRemoving:\t/tmp/${binary}.tar.gz" && rm -rfv /tmp/${binary}-${version}.tar.gz
+echo -e "\nDownloading:\t${BINARY}-${VERSION}!\n"
+wget "https://pm.puppetlabs.com/cgi-bin/download.cgi?dist=${DISTRO}&rel=${RELEASE}&arch=${OSARCH}&ver=${VERSION}" -O /tmp/${BINARY}-${VERSION}.tar.gz  &> /dev/null
+echo -e "\nExtracting: /tmp/${BINARY}-${VERSION}.tar.gz \t to:\t ${EXTRACT_PATH}/${BINARY}-${VERSION}"
+tar -xzf /tmp/${BINARY}-${VERSION}.tar.gz -C ${EXTRACT_PATH}/${BINARY}-${VERSION} --strip-components=1
+echo -e "\nRemoving:\t/tmp/${BINARY}.tar.gz" && rm -rfv /tmp/${BINARY}-${VERSION}.tar.gz
 
 # Create custom config file to use for installation.
 cat > /tmp/pe.conf <<EOF
 {
-  "console_admin_password": "password",
-  "puppet_enterprise::puppet_master_host": "%{::trusted.certname}",
-  "puppet_enterprise::profile::master::java_args": {
-    "Xms": "512m",
-    "Xmx": "1024m"
-  },
-  "pe_install::puppet_master_dnsaltnames": [
-    "${alt1}",
-    "${alt2}",
-    "puppet"
-  ]
+	"console_admin_password": "${PASS}",
+	"puppet_enterprise::puppet_master_host": "%{::trusted.certname}",
+	"puppet_enterprise::profile::console::rbac_token_auth_lifetime": "1y",
+	"puppet_enterprise::profile::master::java_args": {
+		"Xms": "2048m",
+		"Xmx": "2048m"
+	},
+	"pe_install::puppet_master_dnsaltnames": [
+		"${ALT1}",
+		"${ALT2}",
+		"puppet"
+	],
+	"puppet_enterprise::profile::master::r10k_remote": "${R10K_REMOTE_REPO}",
+	"puppet_enterprise::profile::master::r10k_private_key": "${DEPLOY_PRIV_KEY_FILE_DEST}",
+	"puppet_enterprise::profile::master::code_manager_auto_configure": true
 }
 EOF
 
 # Execute PUPPET ENTERPRISE installer using the config file
-${extract_path}/${binary}-${version}/puppet-enterprise-installer -c /tmp/pe.conf
+${EXTRACT_PATH}/${BINARY}-${VERSION}/puppet-enterprise-installer -c /tmp/pe.conf
 
 # Remove custom config file
 rm -v /tmp/pe.conf
 
 # Remove the extracted directory.
-echo -e "\nREMOVING THE PATH IN WHICH PUPPET ENTERPRISE WAS EXTRACTED!\n" && rm -rf ${extract_path}/${binary}-${version}
+echo -e "\nREMOVING THE PATH IN WHICH PUPPET ENTERPRISE WAS EXTRACTED!\n" && rm -rf ${EXTRACT_PATH}/${BINARY}-${VERSION}
+
+# Add private key for the deploy public key set up for Puppet Control Repo in GitHub.
+cp -v ${DEPLOY_PRIV_KEY_FILE_ORIG} ${DEPLOY_PRIV_KEY_FILE_DEST}
+chown -Rv pe-puppet:pe-puppet ${DEPLOY_PRIV_KEY_FILE_DEST}
+chmod 0400 ${DEPLOY_PRIV_KEY_FILE_DEST}
+
+# Set up puppet access for
+echo ${PASS} | puppet access login --username admin
 
 # Enable autosign and set permissions
 echo "*" > /etc/puppetlabs/puppet/autosign.conf && chown pe-puppet:pe-puppet /etc/puppetlabs/puppet/autosign.conf
 
-# Run puppet agent twice based on successful execution of first to make sure changes are there.
-puppet agent -t && puppet agent -t
+/opt/puppetlabs/bin/puppet-code deploy production --wait
 
-# Another run of puppet agent
-puppet agent -t || true
+# # Run puppet agent twice based on successful execution of first to make sure changes are there.
+# puppet agent -t && puppet agent -t
+#
+# # Another run of puppet agent
+# puppet agent -t || true
 
 # Check for puppet infrastructure status
 echo -e "\nChecking and printing the status of Puppet Enterprise Infrastructure Services.\n"
