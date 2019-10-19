@@ -1,12 +1,23 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+$install_git-secrets = <<-SCRIPT
+apt-get update
+apt-get install apt-transport-https -y
+echo "deb https://dl.bintray.com/sobolevn/deb git-secret main" | sudo tee -a /etc/apt/sources.list.d/git-secrets.list
+wget -qO - https://api.bintray.com/users/sobolevn/keys/gpg/public.key | sudo apt-key add -
+apt-get update && sudo apt-get install git-secret -y
+SCRIPT
+
+
 Vagrant.configure("2") do |config|
 
   config.vm.define "puppetserver" do |puppetserver|
     puppetserver.vm.box = "ubuntu/xenial64"
     puppetserver.vm.hostname = "puppetserver.local.com"
     puppetserver.vm.network "private_network", ip: "192.168.1.10"
+    puppetserver.vm.provision "shell", inline: $install_git-secrets
+    puppetserver.vm.provision "file", source: "files/id-control_repo.rsa", destination: "/tmp/id-control_repo.rsa"
     puppetserver.vm.provision "shell", path: "install_puppet-enterprise.sh"
     puppetserver.vm.provider "virtualbox" do |v|
      v.memory = 4096
