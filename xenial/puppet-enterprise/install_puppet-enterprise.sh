@@ -132,7 +132,7 @@ cp -v ${DEPLOY_PRIV_KEY_FILE_ORIG} ${DEPLOY_PRIV_KEY_FILE_DEST}
 chown -Rv pe-puppet:pe-puppet ${DEPLOY_PRIV_KEY_FILE_DEST}
 chmod 0400 ${DEPLOY_PRIV_KEY_FILE_DEST}
 
-# Set up puppet access for
+# Set up puppet access for generating and using token.
 echo ${PASS} | puppet access login --username admin
 
 # Enable autosign and set permissions
@@ -140,11 +140,14 @@ echo "*" > /etc/puppetlabs/puppet/autosign.conf && chown pe-puppet:pe-puppet /et
 
 /opt/puppetlabs/bin/puppet-code deploy production --wait
 
-# # Run puppet agent twice based on successful execution of first to make sure changes are there.
-# puppet agent -t && puppet agent -t
-#
-# # Another run of puppet agent
-# puppet agent -t || true
+# Run puppet agent twice based on successful execution of first to make sure changes are there.
+puppet agent -t && puppet agent -t
+
+# Another run of puppet agent
+puppet agent -t || true
+
+# Installing desired gems using gem provided by puppet.
+/opt/puppetlabs/puppet/bin/gem install puppet-lint
 
 # Check for puppet infrastructure status
 echo -e "\nChecking and printing the status of Puppet Enterprise Infrastructure Services.\n"
